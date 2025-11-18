@@ -42,6 +42,9 @@ class Database:
         if user.empty:
             return None
 
+        # Replace NaN with empty strings
+        user = user.fillna('')
+
         return user.iloc[0].to_dict()
 
     @staticmethod
@@ -54,6 +57,9 @@ class Database:
         user = df[df['user_id'] == user_id]
         if user.empty:
             return None
+
+        # Replace NaN with empty strings
+        user = user.fillna('')
 
         return user.iloc[0].to_dict()
 
@@ -94,6 +100,10 @@ class Database:
         df = Database._read_csv(settings.USERS_CSV)
         if df.empty:
             return []
+        
+        # Replace NaN with empty strings
+        df = df.fillna('')
+        
         return df.to_dict('records')
 
     # ============= FACT CHECK OPERATIONS =============
@@ -141,6 +151,9 @@ class Database:
         if fact_check.empty:
             return None
 
+        # Replace NaN with empty strings
+        fact_check = fact_check.fillna('')
+
         result = fact_check.iloc[0].to_dict()
         # Parse citations JSON
         if result.get('citations'):
@@ -148,6 +161,8 @@ class Database:
                 result['citations'] = json.loads(result['citations'])
             except:
                 result['citations'] = []
+        else:
+            result['citations'] = []
 
         return result
 
@@ -165,6 +180,9 @@ class Database:
         # Sort by timestamp descending
         user_checks = user_checks.sort_values('timestamp', ascending=False)
 
+        # Replace NaN with empty strings or appropriate defaults
+        user_checks = user_checks.fillna('')
+
         results = user_checks.to_dict('records')
         # Parse citations for each record
         for result in results:
@@ -173,6 +191,8 @@ class Database:
                     result['citations'] = json.loads(result['citations'])
                 except:
                     result['citations'] = []
+            else:
+                result['citations'] = []
 
         return results
 
@@ -186,6 +206,9 @@ class Database:
         # Sort by timestamp descending
         df = df.sort_values('timestamp', ascending=False)
 
+        # Replace NaN with empty strings or appropriate defaults
+        df = df.fillna('')
+
         results = df.to_dict('records')
         # Parse citations for each record
         for result in results:
@@ -194,6 +217,8 @@ class Database:
                     result['citations'] = json.loads(result['citations'])
                 except:
                     result['citations'] = []
+            else:
+                result['citations'] = []
 
         return results
 
@@ -235,6 +260,9 @@ class Database:
         # Sort by timestamp ascending
         comments = comments.sort_values('timestamp', ascending=True)
 
+        # Replace NaN with empty strings
+        comments = comments.fillna('')
+
         return comments.to_dict('records')
 
     @staticmethod
@@ -243,5 +271,8 @@ class Database:
         df = Database._read_csv(settings.ADMIN_COMMENTS_CSV)
         if df.empty:
             return []
+
+        # Replace NaN with empty strings
+        df = df.fillna('')
 
         return df.to_dict('records')

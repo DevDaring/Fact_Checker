@@ -11,6 +11,65 @@ from pathlib import Path
 
 router = APIRouter(prefix="/api/fact-check", tags=["Fact Checking"])
 
+@router.post("/text", response_model=FactCheckResult)
+async def fact_check_text_only(
+    data: dict,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """
+    Fact-check text directly without file upload
+
+    Args:
+        data: Text content to fact-check
+        credentials: JWT token
+
+    Returns:
+        Fact-check result with citations
+    """
+    # Verify authentication
+    user = await AuthMiddleware.verify_token(credentials)
+
+    text_content = data.get("text")
+
+    if not text_content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="text is required"
+        )
+
+    try:
+        # Initialize Gemini service
+        gemini_service = GeminiService()
+
+        # Fact-check the text
+        result = gemini_service.fact_check_text(text_content)
+        gemini_response = result["response"]
+        citations = result["citations"]
+
+        # Save fact-check to database
+        fact_check = Database.create_fact_check(
+            user_id=user["user_id"],
+            upload_type="text",
+            file_path=None,
+            extracted_text=text_content,
+            gemini_response=gemini_response,
+            citations=citations
+        )
+
+        return FactCheckResult(
+            fact_check_id=fact_check["fact_check_id"],
+            extracted_text=text_content,
+            gemini_response=gemini_response,
+            citations=citations,
+            timestamp=fact_check["timestamp"]
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing fact-check: {str(e)}"
+        )
+
 @router.post("/process", response_model=FactCheckResult)
 async def process_fact_check(
     data: dict,

@@ -36,13 +36,22 @@ class GeminiService:
 
 Statement: "{text}"
 
-Provide your analysis in exactly 10 clear, well-structured sentences. Do not use bullet points, asterisks, or numbered lists. Write in flowing paragraphs with proper sentence structure. Include:
-- A clear verdict on the accuracy
-- Detailed explanation with evidence
-- Key facts and context
-- Reference to sources when mentioning information
+Provide your analysis in the following structured format:
 
-Format your response as natural prose, not as a list."""
+**VERDICT (First 2 lines - mark with **VERDICT:** prefix):**
+Clearly state the content classification (e.g., "Scientific and Factual", "Fictional and Artistic", "Religious and Cultural", "Misleading", "False Information", "Partially True", etc.). Provide a brief one-line summary of your verdict.
+
+**ANALYSIS (Next 5-6 lines with citations):**
+Provide 5-6 detailed points analyzing the content. Each point should:
+- Present specific facts or findings
+- Reference credible sources
+- Explain the evidence
+- Connect findings to the verdict
+
+**CONCLUSION (Last 1-2 lines - mark with **CONCLUSION:** prefix):**
+Summarize the overall assessment and final judgment.
+
+Do not use bullet points or numbered lists. Write in clear, flowing sentences with proper paragraph structure."""
 
         try:
             # Use Google Search grounding
@@ -109,13 +118,22 @@ Format your response as natural prose, not as a list."""
 
 Image Description: "{image_description}"
 
-Provide your fact-check analysis in exactly 10 clear, well-structured sentences. Do not use bullet points, asterisks, or numbered lists. Write in flowing paragraphs with proper sentence structure. Include:
-- Verification of any visible claims or information
-- A clear verdict on authenticity
-- Additional context and background
-- Reference to sources when mentioning information
+Provide your analysis in the following structured format:
 
-Format your response as natural prose, not as a list."""
+**VERDICT (First 2 lines - mark with **VERDICT:** prefix):**
+Clearly state the content classification (e.g., "Authentic Image", "Manipulated/Edited", "Artistic Creation", "Historical Content", "Misleading Context", etc.). Provide a brief one-line summary of your verdict.
+
+**ANALYSIS (Next 5-6 lines with citations):**
+Provide 5-6 detailed points analyzing the image content. Each point should:
+- Verify any visible claims or text in the image
+- Reference credible sources about the subject matter
+- Explain the authenticity or context
+- Connect findings to the verdict
+
+**CONCLUSION (Last 1-2 lines - mark with **CONCLUSION:** prefix):**
+Summarize the overall assessment of the image's authenticity and accuracy.
+
+Do not use bullet points or numbered lists. Write in clear, flowing sentences with proper paragraph structure."""
 
             # Use Google Search grounding for fact-checking
             config = types.GenerateContentConfig(
@@ -202,17 +220,16 @@ Format your response as natural prose, not as a list."""
     
     def _format_response(self, text: str) -> str:
         """
-        Format the response text to remove bullets, stars, and ensure proper sentence flow
+        Format the response text while preserving VERDICT and CONCLUSION markers
 
         Args:
             text: Raw response text
 
         Returns:
-            Formatted text
+            Formatted text with preserved structure
         """
-        # Remove markdown formatting
-        text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)  # Remove bold
-        text = re.sub(r'\*(.+?)\*', r'\1', text)  # Remove italic
+        # Keep VERDICT and CONCLUSION bold markers
+        # Remove other markdown formatting but preserve structure
         text = re.sub(r'^[\*\-\•]\s+', '', text, flags=re.MULTILINE)  # Remove bullet points
         text = re.sub(r'^\d+\.\s+', '', text, flags=re.MULTILINE)  # Remove numbered lists
         
