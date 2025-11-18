@@ -1,0 +1,2 @@
+user_id,email,password_hash,role,created_at,last_login
+1,admin@factchecker.com,$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYzpLLIYjKu,Admin,2024-01-01 00:00:00,2024-01-01 00:00:00
