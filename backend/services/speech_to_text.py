@@ -9,9 +9,15 @@ class SpeechToTextService:
 
     def __init__(self):
         """Initialize the Speech-to-Text client"""
-        # Set up credentials
+        # Set up credentials - resolve path relative to project root
         credentials_path = Path(settings.GCP_CREDENTIALS_PATH)
-
+        
+        # If path is relative, make it relative to the project root
+        if not credentials_path.is_absolute():
+            # Get the project root (3 levels up from this file)
+            project_root = Path(__file__).parent.parent.parent
+            credentials_path = project_root / credentials_path
+        
         if credentials_path.exists():
             # Use service account credentials
             credentials = service_account.Credentials.from_service_account_file(
@@ -23,7 +29,7 @@ class SpeechToTextService:
             try:
                 self.client = speech_v1.SpeechClient()
             except Exception as e:
-                print(f"Warning: Could not initialize Speech-to-Text client: {e}")
+                print(f"Warning: Could not initialize Speech-to-Text client: File {credentials_path} was not found.")
                 self.client = None
 
     def transcribe_audio(self, audio_file_path: str) -> str:
