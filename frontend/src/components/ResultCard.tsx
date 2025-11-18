@@ -8,6 +8,18 @@ interface ResultCardProps {
 }
 
 const ResultCard: React.FC<ResultCardProps> = ({ extractedText, response, citations }) => {
+  // Split response into sentences for better readability
+  const formatResponse = (text: string) => {
+    // Split by sentence-ending punctuation followed by space
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+    return sentences.map((sentence, index) => (
+      <span key={index}>
+        {sentence.trim()}
+        {index < sentences.length - 1 && ' '}
+      </span>
+    ));
+  };
+
   return (
     <div className="result-card">
       <h3>Fact-Check Results</h3>
@@ -21,7 +33,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ extractedText, response, citati
 
       <div className="response-section">
         <h4>Analysis:</h4>
-        <div className="response-text">{response}</div>
+        <p className="response-text">{formatResponse(response)}</p>
       </div>
 
       {citations && citations.length > 0 && (
