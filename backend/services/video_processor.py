@@ -1,5 +1,6 @@
 import subprocess
 import os
+import shutil
 from pathlib import Path
 from typing import Optional
 from config.settings import settings
@@ -7,6 +8,38 @@ import uuid
 
 class VideoProcessor:
     """Video processing service for audio extraction"""
+
+    @staticmethod
+    def _get_ffmpeg_command() -> str:
+        """
+        Get the ffmpeg command, checking if it's available in PATH
+        
+        Returns:
+            The ffmpeg command path
+        """
+        # Try to find ffmpeg in PATH
+        ffmpeg_path = shutil.which("ffmpeg")
+        if ffmpeg_path:
+            return ffmpeg_path
+        
+        # If not found, return just 'ffmpeg' and let it fail with a clear message
+        return "ffmpeg"
+    
+    @staticmethod
+    def _get_ffprobe_command() -> str:
+        """
+        Get the ffprobe command, checking if it's available in PATH
+        
+        Returns:
+            The ffprobe command path
+        """
+        # Try to find ffprobe in PATH
+        ffprobe_path = shutil.which("ffprobe")
+        if ffprobe_path:
+            return ffprobe_path
+        
+        # If not found, return just 'ffprobe' and let it fail with a clear message
+        return "ffprobe"
 
     @staticmethod
     def extract_audio_from_video(video_path: str, output_format: str = "wav") -> str:
@@ -20,6 +53,9 @@ class VideoProcessor:
         Returns:
             Path to the extracted audio file
         """
+        # Get ffmpeg command
+        ffmpeg_cmd = VideoProcessor._get_ffmpeg_command()
+        
         # Generate unique output filename
         video_file = Path(video_path)
         output_filename = f"{video_file.stem}_{uuid.uuid4().hex[:8]}.{output_format}"
@@ -37,7 +73,7 @@ class VideoProcessor:
             if output_format.lower() == "wav":
                 # Extract as WAV with specific parameters for Speech-to-Text
                 command = [
-                    "ffmpeg",
+                    ffmpeg_cmd,
                     "-i", str(video_path),
                     "-vn",  # No video
                     "-acodec", "pcm_s16le",  # PCM 16-bit little-endian
@@ -49,7 +85,7 @@ class VideoProcessor:
             else:
                 # Extract with default settings
                 command = [
-                    "ffmpeg",
+                    ffmpeg_cmd,
                     "-i", str(video_path),
                     "-vn",
                     "-acodec", "copy",
@@ -70,6 +106,8 @@ class VideoProcessor:
 
             return str(output_path)
 
+        except FileNotFoundError:
+            raise Exception("FFmpeg not found. Please ensure ffmpeg is installed and in your system PATH. Restart the terminal/server after installation.")
         except subprocess.CalledProcessError as e:
             error_message = e.stderr.decode() if e.stderr else str(e)
             raise Exception(f"FFmpeg error during audio extraction: {error_message}")
@@ -95,13 +133,16 @@ class VideoProcessor:
         Returns:
             Path to the converted audio file
         """
+        # Get ffmpeg command
+        ffmpeg_cmd = VideoProcessor._get_ffmpeg_command()
+        
         audio_file = Path(audio_path)
         output_filename = f"{audio_file.stem}_converted_{uuid.uuid4().hex[:8]}.{output_format}"
         output_path = settings.TEMP_FOLDER / output_filename
 
         try:
             command = [
-                "ffmpeg",
+                ffmpeg_cmd,
                 "-i", str(audio_path),
                 "-acodec", "pcm_s16le",
                 "-ar", str(sample_rate),
@@ -122,6 +163,8 @@ class VideoProcessor:
 
             return str(output_path)
 
+        except FileNotFoundError:
+            raise Exception("FFmpeg not found. Please ensure ffmpeg is installed and in your system PATH. Restart the terminal/server after installation.")
         except subprocess.CalledProcessError as e:
             error_message = e.stderr.decode() if e.stderr else str(e)
             raise Exception(f"FFmpeg error during audio conversion: {error_message}")
@@ -155,8 +198,11 @@ class VideoProcessor:
             Dictionary with video information
         """
         try:
+            # Get ffprobe command
+            ffprobe_cmd = VideoProcessor._get_ffprobe_command()
+            
             command = [
-                "ffprobe",
+                ffprobe_cmd,
                 "-v", "quiet",
                 "-print_format", "json",
                 "-show_format",
@@ -175,6 +221,9 @@ class VideoProcessor:
             info = json.loads(result.stdout.decode())
             return info
 
+        except FileNotFoundError:
+            print("FFprobe not found. Please ensure ffmpeg is installed and in your system PATH.")
+            return {}
         except Exception as e:
             print(f"Error getting video info: {e}")
             return {}

@@ -3,6 +3,8 @@ from pathlib import Path
 from google.cloud import speech_v1
 from google.oauth2 import service_account
 from config.settings import settings
+import wave
+import contextlib
 
 class SpeechToTextService:
     """Google Cloud Speech-to-Text service"""
@@ -32,9 +34,31 @@ class SpeechToTextService:
                 print(f"Warning: Could not initialize Speech-to-Text client: File {credentials_path} was not found.")
                 self.client = None
 
+    def _get_audio_duration(self, audio_file_path: str) -> float:
+        """
+        Get the duration of an audio file in seconds
+        
+        Args:
+            audio_file_path: Path to the audio file
+            
+        Returns:
+            Duration in seconds
+        """
+        try:
+            with contextlib.closing(wave.open(audio_file_path, 'r')) as f:
+                frames = f.getnframes()
+                rate = f.getframerate()
+                duration = frames / float(rate)
+                return duration
+        except Exception as e:
+            print(f"Warning: Could not determine audio duration: {e}")
+            # If we can't determine duration, assume it might be long
+            return 61.0  # Return >60 to trigger chunking
+
     def transcribe_audio(self, audio_file_path: str) -> str:
         """
         Transcribe audio file to text
+        Automatically handles long audio files by chunking
 
         Args:
             audio_file_path: Path to the audio file
@@ -45,6 +69,26 @@ class SpeechToTextService:
         if not self.client:
             raise Exception("Speech-to-Text client not initialized. Please check GCP credentials.")
 
+        # Check audio duration
+        duration = self._get_audio_duration(audio_file_path)
+        
+        # If audio is longer than 60 seconds, use chunked transcription
+        if duration > 60:
+            return self._transcribe_long_audio(audio_file_path, duration)
+        
+        # For short audio, use synchronous recognition
+        return self._transcribe_short_audio(audio_file_path)
+
+    def _transcribe_short_audio(self, audio_file_path: str) -> str:
+        """
+        Transcribe short audio file (< 1 minute) using synchronous recognition
+        
+        Args:
+            audio_file_path: Path to the audio file
+            
+        Returns:
+            Transcribed text
+        """
         # Read audio file
         with open(audio_file_path, "rb") as audio_file:
             content = audio_file.read()
@@ -80,9 +124,53 @@ class SpeechToTextService:
 
         return " ".join(transcripts)
 
+    def _transcribe_long_audio(self, audio_file_path: str, duration: float) -> str:
+        """
+        Transcribe long audio file by splitting it into chunks
+        
+        Args:
+            audio_file_path: Path to the audio file
+            duration: Duration of the audio in seconds
+            
+        Returns:
+            Transcribed text
+        """
+        import wave
+        from pydub import AudioSegment
+        import tempfile
+        
+        # Split audio into 50-second chunks (leaving margin for safety)
+        chunk_duration_ms = 50 * 1000  # 50 seconds in milliseconds
+        
+        # Load audio file
+        audio = AudioSegment.from_wav(audio_file_path)
+        
+        transcripts = []
+        
+        # Process audio in chunks
+        for i, start_ms in enumerate(range(0, len(audio), chunk_duration_ms)):
+            end_ms = min(start_ms + chunk_duration_ms, len(audio))
+            chunk = audio[start_ms:end_ms]
+            
+            # Save chunk to temporary file
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as temp_file:
+                chunk_path = temp_file.name
+                chunk.export(chunk_path, format='wav')
+            
+            try:
+                # Transcribe chunk
+                chunk_transcript = self._transcribe_short_audio(chunk_path)
+                transcripts.append(chunk_transcript)
+            finally:
+                # Clean up temporary file
+                os.unlink(chunk_path)
+        
+        return " ".join(transcripts)
+
     def transcribe_audio_long(self, audio_file_path: str) -> str:
         """
         Transcribe long audio file using async recognition
+        (This method is kept for backward compatibility but now just calls transcribe_audio)
 
         Args:
             audio_file_path: Path to the audio file
@@ -90,11 +178,4 @@ class SpeechToTextService:
         Returns:
             Transcribed text
         """
-        if not self.client:
-            raise Exception("Speech-to-Text client not initialized. Please check GCP credentials.")
-
-        # For files longer than 1 minute, use long-running recognition
-        # This would require uploading to Google Cloud Storage
-        # For now, we'll use the synchronous method with chunking if needed
-
         return self.transcribe_audio(audio_file_path)
