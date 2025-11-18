@@ -111,10 +111,41 @@ fact-checker/
    npm run install:all
    ```
 
-5. **Install FFmpeg** (if not already installed)
-   - **Ubuntu/Debian**: `sudo apt-get install ffmpeg`
-   - **macOS**: `brew install ffmpeg`
-   - **Windows**: Download from [ffmpeg.org](https://ffmpeg.org/download.html)
+5. **Install FFmpeg** (Required for video/audio processing)
+
+   **Windows:**
+   1. Download FFmpeg from https://www.gyan.dev/ffmpeg/builds/ (get the full build)
+   2. Extract the ZIP file to `C:\ffmpeg`
+   3. Add FFmpeg to your system PATH:
+      - Press `Win + X` and select "System"
+      - Click "Advanced system settings"
+      - Click "Environment Variables"
+      - Under "System Variables", find and edit "Path"
+      - Click "New" and add `C:\ffmpeg\bin`
+      - Click OK on all windows
+   4. Restart your terminal/IDE
+   5. Verify installation: `ffmpeg -version`
+
+   **Alternative (Windows with Chocolatey):**
+   ```bash
+   choco install ffmpeg
+   ```
+
+   **macOS:**
+   ```bash
+   brew install ffmpeg
+   ```
+
+   **Ubuntu/Debian:**
+   ```bash
+   sudo apt-get update
+   sudo apt-get install ffmpeg
+   ```
+
+   **Fedora:**
+   ```bash
+   sudo dnf install ffmpeg
+   ```
 
 ### Running the Application
 
@@ -308,9 +339,24 @@ Once the backend is running, visit http://localhost:8000/api/docs for interactiv
 
 ### Common Issues
 
-1. **FFmpeg not found**
-   - Install FFmpeg: See installation instructions above
-   - Verify installation: `ffmpeg -version`
+1. **FFmpeg not found / WinError 2 / "The system cannot find the file specified"**
+
+   This error occurs when FFmpeg is not installed or not in your system PATH.
+
+   **Solution:**
+   - Install FFmpeg following the detailed instructions in the Installation section above
+   - On Windows, make sure to add FFmpeg's `bin` folder to your system PATH
+   - **Important:** After adding to PATH, restart your terminal/IDE completely
+   - Verify installation by running: `ffmpeg -version` in a new terminal
+   - If you still see the error after installation, ensure you restarted your IDE/terminal
+
+   **Quick Windows Fix:**
+   ```bash
+   # Using Chocolatey (easiest method)
+   choco install ffmpeg
+
+   # Then restart your terminal/IDE
+   ```
 
 2. **GCP Authentication Error**
    - Ensure `gcp-credentials.json` is in the root directory

@@ -1,5 +1,6 @@
 import subprocess
 import os
+import shutil
 from pathlib import Path
 from typing import Optional
 from config.settings import settings
@@ -7,6 +8,56 @@ import uuid
 
 class VideoProcessor:
     """Video processing service for audio extraction"""
+
+    @staticmethod
+    def check_ffmpeg_installed() -> bool:
+        """
+        Check if FFmpeg is installed and available in PATH
+
+        Returns:
+            True if FFmpeg is available, False otherwise
+        """
+        return shutil.which("ffmpeg") is not None
+
+    @staticmethod
+    def get_ffmpeg_install_message() -> str:
+        """
+        Get platform-specific FFmpeg installation instructions
+
+        Returns:
+            Installation instructions as a string
+        """
+        import platform
+        system = platform.system()
+
+        if system == "Windows":
+            return (
+                "FFmpeg is not installed or not in your system PATH.\n\n"
+                "To install FFmpeg on Windows:\n"
+                "1. Download FFmpeg from https://www.gyan.dev/ffmpeg/builds/\n"
+                "2. Extract the ZIP file to a folder (e.g., C:\\ffmpeg)\n"
+                "3. Add the 'bin' folder to your system PATH:\n"
+                "   - Open 'Environment Variables' from System Properties\n"
+                "   - Edit the 'Path' variable under System Variables\n"
+                "   - Add the path to FFmpeg's bin folder (e.g., C:\\ffmpeg\\bin)\n"
+                "4. Restart your terminal/IDE and try again\n\n"
+                "Alternative: Install via Chocolatey: choco install ffmpeg"
+            )
+        elif system == "Darwin":  # macOS
+            return (
+                "FFmpeg is not installed.\n\n"
+                "To install FFmpeg on macOS:\n"
+                "1. Install Homebrew if you haven't: https://brew.sh/\n"
+                "2. Run: brew install ffmpeg"
+            )
+        else:  # Linux
+            return (
+                "FFmpeg is not installed.\n\n"
+                "To install FFmpeg on Linux:\n"
+                "Ubuntu/Debian: sudo apt-get install ffmpeg\n"
+                "Fedora: sudo dnf install ffmpeg\n"
+                "Arch: sudo pacman -S ffmpeg"
+            )
 
     @staticmethod
     def extract_audio_from_video(video_path: str, output_format: str = "wav") -> str:
@@ -26,6 +77,10 @@ class VideoProcessor:
         output_path = settings.TEMP_FOLDER / output_filename
 
         try:
+            # Check if FFmpeg is installed
+            if not VideoProcessor.check_ffmpeg_installed():
+                raise FileNotFoundError(VideoProcessor.get_ffmpeg_install_message())
+
             # Use ffmpeg to extract audio
             # -i: input file
             # -vn: disable video
@@ -70,10 +125,16 @@ class VideoProcessor:
 
             return str(output_path)
 
+        except FileNotFoundError as e:
+            # FFmpeg not installed
+            raise Exception(str(e))
         except subprocess.CalledProcessError as e:
             error_message = e.stderr.decode() if e.stderr else str(e)
             raise Exception(f"FFmpeg error during audio extraction: {error_message}")
         except Exception as e:
+            # Check if it's a "file not found" error (Windows or other OS)
+            if "WinError 2" in str(e) or "No such file or directory" in str(e):
+                raise Exception(VideoProcessor.get_ffmpeg_install_message())
             raise Exception(f"Error extracting audio from video: {str(e)}")
 
     @staticmethod
@@ -100,6 +161,10 @@ class VideoProcessor:
         output_path = settings.TEMP_FOLDER / output_filename
 
         try:
+            # Check if FFmpeg is installed
+            if not VideoProcessor.check_ffmpeg_installed():
+                raise FileNotFoundError(VideoProcessor.get_ffmpeg_install_message())
+
             command = [
                 "ffmpeg",
                 "-i", str(audio_path),
@@ -122,10 +187,16 @@ class VideoProcessor:
 
             return str(output_path)
 
+        except FileNotFoundError as e:
+            # FFmpeg not installed
+            raise Exception(str(e))
         except subprocess.CalledProcessError as e:
             error_message = e.stderr.decode() if e.stderr else str(e)
             raise Exception(f"FFmpeg error during audio conversion: {error_message}")
         except Exception as e:
+            # Check if it's a "file not found" error (Windows or other OS)
+            if "WinError 2" in str(e) or "No such file or directory" in str(e):
+                raise Exception(VideoProcessor.get_ffmpeg_install_message())
             raise Exception(f"Error converting audio format: {str(e)}")
 
     @staticmethod
