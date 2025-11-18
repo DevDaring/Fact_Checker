@@ -1,10 +1,10 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import HTTPAuthorizationCredentials
 from typing import List
-from backend.models.comment import CommentCreate, CommentResponse
-from backend.services.database import Database
-from backend.middleware.auth_middleware import AuthMiddleware, security
-from backend.utils.helpers import Helpers
+from models.comment import CommentCreate, CommentResponse
+from services.database import Database
+from middleware.auth_middleware import AuthMiddleware, security
+from utils.helpers import Helpers
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 

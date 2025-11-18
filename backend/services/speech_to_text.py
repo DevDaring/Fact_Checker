@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from google.cloud import speech_v1
 from google.oauth2 import service_account
-from backend.config.settings import settings
+from config.settings import settings
 
 class SpeechToTextService:
     """Google Cloud Speech-to-Text service"""

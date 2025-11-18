@@ -2,7 +2,7 @@ import subprocess
 import os
 from pathlib import Path
 from typing import Optional
-from backend.config.settings import settings
+from config.settings import settings
 import uuid
 
 class VideoProcessor:

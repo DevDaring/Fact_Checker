@@ -1,12 +1,12 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import HTTPAuthorizationCredentials
-from backend.models.fact_check import FactCheckProcess, FactCheckResult
-from backend.services.database import Database
-from backend.services.speech_to_text import SpeechToTextService
-from backend.services.gemini_service import GeminiService
-from backend.services.video_processor import VideoProcessor
-from backend.middleware.auth_middleware import AuthMiddleware, security
-from backend.utils.helpers import Helpers
+from models.fact_check import FactCheckProcess, FactCheckResult
+from services.database import Database
+from services.speech_to_text import SpeechToTextService
+from services.gemini_service import GeminiService
+from services.video_processor import VideoProcessor
+from middleware.auth_middleware import AuthMiddleware, security
+from utils.helpers import Helpers
 from pathlib import Path
 
 router = APIRouter(prefix="/api/fact-check", tags=["Fact Checking"])

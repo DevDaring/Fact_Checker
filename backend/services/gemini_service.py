@@ -1,7 +1,7 @@
 import google.generativeai as genai
 from typing import Dict, List, Optional
 from pathlib import Path
-from backend.config.settings import settings
+from config.settings import settings
 import re
 import json
 
@@ -12,11 +12,8 @@ class GeminiService:
         """Initialize Gemini API"""
         if settings.GEMINI_API_KEY:
             genai.configure(api_key=settings.GEMINI_API_KEY)
-            # Use Gemini 2.5 Flash with Google Search grounding
-            self.model = genai.GenerativeModel(
-                'gemini-2.0-flash-exp',
-                tools='google_search_retrieval'
-            )
+            # Model for general use
+            self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
         else:
             print("Warning: GEMINI_API_KEY not set")
             self.model = None
@@ -47,6 +44,7 @@ Please provide:
 Be objective and cite specific sources."""
 
         try:
+            # Generate response without grounding (google_search not supported in google.generativeai SDK)
             response = self.model.generate_content(prompt)
 
             # Extract citations from grounding metadata if available
@@ -62,7 +60,9 @@ Be objective and cite specific sources."""
 
     def fact_check_image(self, image_path: str) -> Dict[str, any]:
         """
-        Fact-check image using Gemini with Search Grounding
+        Fact-check image using Gemini in two steps:
+        1. Extract description without grounding
+        2. Fact-check the description with grounding
 
         Args:
             image_path: Path to the image file
@@ -73,29 +73,47 @@ Be objective and cite specific sources."""
         if not self.model:
             raise Exception("Gemini API not initialized. Please check GEMINI_API_KEY.")
 
-        # Upload image
         try:
             from PIL import Image
             img = Image.open(image_path)
 
-            prompt = """You are a fact-checking assistant. Analyze this image and verify the claims or information it contains.
+            # Step 1: Extract description from image (without grounding)
+            description_prompt = """Analyze this image and provide a detailed description including:
+1. What the image shows
+2. Any visible text, claims, or information
+3. Context and setting
+4. Notable details or elements
+
+Be thorough and objective in your description."""
+
+            description_response = self.model.generate_content([description_prompt, img])
+            image_description = description_response.text
+
+            # Step 2: Fact-check the description (with grounding)
+            fact_check_prompt = f"""You are a fact-checking assistant. Based on this image description, verify any claims or information using reliable sources.
+
+Image Description: "{image_description}"
 
 Please provide:
-1. Description of what the image shows
-2. Verification of any visible claims, text, or information
-3. Context and background information
+1. Verification of any claims or information mentioned
+2. A clear verdict (True, False, Partially True, or Unverifiable)
+3. Additional context and background information
 4. Assessment of authenticity (if applicable)
 5. Sources and citations for verification
 
 Be thorough and cite reliable sources."""
 
-            response = self.model.generate_content([prompt, img])
+            # Generate fact-check response without grounding (google_search not supported in google.generativeai SDK)
+            fact_check_response = self.model.generate_content(fact_check_prompt)
 
-            # Extract citations
-            citations = self._extract_citations(response)
+            # Extract citations from fact-check response
+            citations = self._extract_citations(fact_check_response)
+
+            # Combine description and fact-check
+            combined_response = f"**Image Description:**\n{image_description}\n\n**Fact-Check Analysis:**\n{fact_check_response.text}"
 
             return {
-                "response": response.text,
+                "response": combined_response,
                 "citations": citations
             }
 

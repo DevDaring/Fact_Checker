@@ -1,8 +1,8 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, status, Depends
 from fastapi.security import HTTPAuthorizationCredentials
-from backend.services.file_handler import FileHandler
-from backend.middleware.auth_middleware import AuthMiddleware, security
-from backend.utils.helpers import Helpers
+from services.file_handler import FileHandler
+from middleware.auth_middleware import AuthMiddleware, security
+from utils.helpers import Helpers
 
 router = APIRouter(prefix="/api/upload", tags=["File Upload"])
 

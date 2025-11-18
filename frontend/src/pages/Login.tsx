@@ -52,7 +52,7 @@ const Login: React.FC = () => {
       <div className="login-container">
         <div className="login-header">
           <h1>Fact Checker</h1>
-          <p className="tagline">Let's Make Difference Between Fact and Illusion</p>
+          <p className="tagline">Let's Make Difference Between Fact and Fiction</p>
         </div>
 
         <form className="login-form" onSubmit={handleSubmit}>
@@ -100,8 +100,11 @@ const Login: React.FC = () => {
         </form>
 
         <div className="login-info">
-          <p>Demo Credentials:</p>
-          <p>Admin: admin@factchecker.com / admin123</p>
+          <p className="demo-title">Demo Credentials:</p>
+          <div className="demo-credentials">
+            <p><strong>Admin:</strong> admin@factchecker.com / admin123</p>
+            <p><strong>User:</strong> user@factchecker.com / user123</p>
+          </div>
         </div>
       </div>
     </div>

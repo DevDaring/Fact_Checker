@@ -3,7 +3,7 @@ import uuid
 from pathlib import Path
 from typing import Tuple, Optional
 from fastapi import UploadFile
-from backend.config.settings import settings
+from config.settings import settings
 
 class FileHandler:
     """File upload and management service"""

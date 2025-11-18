@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from backend.models.user import UserLogin, UserCreate, TokenResponse, UserResponse
-from backend.services.auth_service import AuthService
-from backend.utils.validators import Validators
-from backend.utils.helpers import Helpers
+from models.user import UserLogin, UserCreate, TokenResponse, UserResponse
+from services.auth_service import AuthService
+from utils.validators import Validators
+from utils.helpers import Helpers
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 

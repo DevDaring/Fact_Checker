@@ -1,7 +1,7 @@
 from fastapi import Request, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional, Dict
-from backend.services.auth_service import AuthService
+from services.auth_service import AuthService
 
 security = HTTPBearer()
 

@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from backend.config.settings import settings
-from backend.routes import auth, upload, fact_check, history, admin
+from config.settings import settings
+from routes import auth, upload, fact_check, history, admin
 import uvicorn
 
 # Create FastAPI application

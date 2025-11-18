@@ -24,7 +24,7 @@ const Navbar: React.FC = () => {
       <div className="navbar-container">
         <div className="navbar-brand" onClick={handleNavigateHome}>
           <h2>Fact Checker</h2>
-          <p className="tagline">Let's Make Difference Between Fact and Illusion</p>
+          <p className="tagline">Let's Make Difference Between Fact and Fiction</p>
         </div>
         <div className="navbar-menu">
           {user && (

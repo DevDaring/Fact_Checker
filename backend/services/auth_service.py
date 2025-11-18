@@ -2,8 +2,8 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from backend.config.settings import settings
-from backend.services.database import Database
+from config.settings import settings
+from services.database import Database
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

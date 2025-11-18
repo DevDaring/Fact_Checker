@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 from typing import Optional, List, Dict
 from pathlib import Path
-from backend.config.settings import settings
+from config.settings import settings
 
 class Database:
     """CSV-based database operations"""

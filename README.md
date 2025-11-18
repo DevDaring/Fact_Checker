@@ -1,6 +1,6 @@
 # Fact Checker
 
-**Tagline:** *Let's Make Difference Between Fact and Illusion*
+**Tagline:** *Let's Make Difference Between Fact and Fiction*
 
 A comprehensive web application for fact-checking multimedia content (video, audio, image) using Google Cloud Services and Gemini 2.5 Flash with Search Grounding.
 

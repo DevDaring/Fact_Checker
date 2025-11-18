@@ -13,7 +13,7 @@ Database will csv and folders for storing images. This will be stored in Data fo
 
 Here is the idea-
 Name- Fact Checker
-Tagline - Let's Make Difference Between Fact and Illusion
+Tagline - Let's Make Difference Between Fact and Fiction
 User will login to application with mail id and password. In a dropdown, user will select 'User'.
 User can upload Video, Audio or image.
 From video the application will take audio and send it to google speech to text
