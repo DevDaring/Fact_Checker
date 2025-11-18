@@ -1,4 +1,5 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from typing import Dict, List, Optional
 from pathlib import Path
 from config.settings import settings
@@ -6,21 +7,21 @@ import re
 import json
 
 class GeminiService:
-    """Gemini 2.5 Flash API service with Search Grounding"""
+    """Gemini 2.0 Flash API service with Google Search Grounding"""
 
     def __init__(self):
         """Initialize Gemini API"""
         if settings.GEMINI_API_KEY:
-            genai.configure(api_key=settings.GEMINI_API_KEY)
-            # Model for general use
-            self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
+            self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            self.model_name = 'gemini-2.0-flash-exp'
         else:
             print("Warning: GEMINI_API_KEY not set")
-            self.model = None
+            self.client = None
+            self.model_name = None
 
     def fact_check_text(self, text: str) -> Dict[str, any]:
         """
-        Fact-check text using Gemini with Search Grounding
+        Fact-check text using Gemini with Google Search Grounding
 
         Args:
             text: Text to fact-check
@@ -28,30 +29,42 @@ class GeminiService:
         Returns:
             Dictionary with response and citations
         """
-        if not self.model:
+        if not self.client:
             raise Exception("Gemini API not initialized. Please check GEMINI_API_KEY.")
 
-        prompt = f"""You are a fact-checking assistant. Analyze the following statement and verify its accuracy using reliable sources.
+        prompt = f"""You are a fact-checking assistant. Analyze the following statement and verify its accuracy using reliable sources from the web.
 
 Statement: "{text}"
 
-Please provide:
-1. A clear verdict (True, False, Partially True, or Unverifiable)
-2. A detailed explanation with evidence
-3. Key facts and context
-4. Sources and citations
+Provide your analysis in exactly 10 clear, well-structured sentences. Do not use bullet points, asterisks, or numbered lists. Write in flowing paragraphs with proper sentence structure. Include:
+- A clear verdict on the accuracy
+- Detailed explanation with evidence
+- Key facts and context
+- Reference to sources when mentioning information
 
-Be objective and cite specific sources."""
+Format your response as natural prose, not as a list."""
 
         try:
-            # Generate response without grounding (google_search not supported in google.generativeai SDK)
-            response = self.model.generate_content(prompt)
+            # Use Google Search grounding
+            config = types.GenerateContentConfig(
+                tools=[{'google_search': {}}],
+                temperature=0.7
+            )
+            
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+                config=config
+            )
 
-            # Extract citations from grounding metadata if available
-            citations = self._extract_citations(response)
+            # Extract citations from grounding metadata
+            citations = self._extract_citations_new(response)
+            
+            # Format the response text
+            formatted_response = self._format_response(response.text)
 
             return {
-                "response": response.text,
+                "response": formatted_response,
                 "citations": citations
             }
 
@@ -62,7 +75,7 @@ Be objective and cite specific sources."""
         """
         Fact-check image using Gemini in two steps:
         1. Extract description without grounding
-        2. Fact-check the description with grounding
+        2. Fact-check the description with Google Search grounding
 
         Args:
             image_path: Path to the image file
@@ -70,62 +83,72 @@ Be objective and cite specific sources."""
         Returns:
             Dictionary with response and citations
         """
-        if not self.model:
+        if not self.client:
             raise Exception("Gemini API not initialized. Please check GEMINI_API_KEY.")
 
         try:
-            from PIL import Image
-            img = Image.open(image_path)
-
             # Step 1: Extract description from image (without grounding)
-            description_prompt = """Analyze this image and provide a detailed description including:
-1. What the image shows
-2. Any visible text, claims, or information
-3. Context and setting
-4. Notable details or elements
+            with open(image_path, 'rb') as f:
+                image_data = f.read()
+            
+            description_prompt = """Analyze this image carefully. Describe what you see including any visible text, claims, people, objects, settings, and notable details. Be objective and thorough in your description."""
 
-Be thorough and objective in your description."""
+            # Upload image and get description
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=[
+                    types.Part.from_bytes(data=image_data, mime_type='image/jpeg'),
+                    description_prompt
+                ]
+            )
+            
+            image_description = response.text
 
-            description_response = self.model.generate_content([description_prompt, img])
-            image_description = description_response.text
-
-            # Step 2: Fact-check the description (with grounding)
-            fact_check_prompt = f"""You are a fact-checking assistant. Based on this image description, verify any claims or information using reliable sources.
+            # Step 2: Fact-check the description with Google Search grounding
+            fact_check_prompt = f"""You are a fact-checking assistant. Based on this image description, verify any claims or information using reliable web sources.
 
 Image Description: "{image_description}"
 
-Please provide:
-1. Verification of any claims or information mentioned
-2. A clear verdict (True, False, Partially True, or Unverifiable)
-3. Additional context and background information
-4. Assessment of authenticity (if applicable)
-5. Sources and citations for verification
+Provide your fact-check analysis in exactly 10 clear, well-structured sentences. Do not use bullet points, asterisks, or numbered lists. Write in flowing paragraphs with proper sentence structure. Include:
+- Verification of any visible claims or information
+- A clear verdict on authenticity
+- Additional context and background
+- Reference to sources when mentioning information
 
-Be thorough and cite reliable sources."""
+Format your response as natural prose, not as a list."""
 
-            # Generate fact-check response without grounding (google_search not supported in google.generativeai SDK)
-            fact_check_response = self.model.generate_content(fact_check_prompt)
+            # Use Google Search grounding for fact-checking
+            config = types.GenerateContentConfig(
+                tools=[{'google_search': {}}],
+                temperature=0.7
+            )
+            
+            fact_check_response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=fact_check_prompt,
+                config=config
+            )
 
             # Extract citations from fact-check response
-            citations = self._extract_citations(fact_check_response)
-
-            # Combine description and fact-check
-            combined_response = f"**Image Description:**\n{image_description}\n\n**Fact-Check Analysis:**\n{fact_check_response.text}"
+            citations = self._extract_citations_new(fact_check_response)
+            
+            # Format the response
+            formatted_response = self._format_response(fact_check_response.text)
 
             return {
-                "response": combined_response,
+                "response": formatted_response,
                 "citations": citations
             }
 
         except Exception as e:
             raise Exception(f"Error during image fact-checking: {str(e)}")
 
-    def _extract_citations(self, response) -> List[Dict]:
+    def _extract_citations_new(self, response) -> List[Dict]:
         """
-        Extract citations from Gemini response
+        Extract citations from google-genai response with grounding metadata
 
         Args:
-            response: Gemini API response
+            response: Gemini API response from google-genai
 
         Returns:
             List of citation dictionaries
@@ -133,42 +156,71 @@ Be thorough and cite reliable sources."""
         citations = []
 
         try:
-            # Check if response has grounding metadata
+            # Check for grounding metadata in the new SDK format
             if hasattr(response, 'candidates') and response.candidates:
-                candidate = response.candidates[0]
+                for candidate in response.candidates:
+                    if hasattr(candidate, 'grounding_metadata') and candidate.grounding_metadata:
+                        grounding = candidate.grounding_metadata
+                        
+                        # Extract search entry point if available
+                        if hasattr(grounding, 'search_entry_point'):
+                            search_entry = grounding.search_entry_point
+                            if hasattr(search_entry, 'rendered_content'):
+                                # This contains the search results used
+                                pass
+                        
+                        # Extract grounding supports (the actual sources)
+                        if hasattr(grounding, 'grounding_supports'):
+                            for support in grounding.grounding_supports:
+                                if hasattr(support, 'segment'):
+                                    segment = support.segment
+                                    
+                                    # Get the grounding chunk index
+                                    if hasattr(support, 'grounding_chunk_indices'):
+                                        for idx in support.grounding_chunk_indices:
+                                            if hasattr(grounding, 'grounding_chunks') and idx < len(grounding.grounding_chunks):
+                                                chunk = grounding.grounding_chunks[idx]
+                                                
+                                                if hasattr(chunk, 'web') and chunk.web:
+                                                    citation = {
+                                                        "title": getattr(chunk.web, 'title', 'Source'),
+                                                        "url": getattr(chunk.web, 'uri', ''),
+                                                        "snippet": ''
+                                                    }
+                                                    if citation not in citations:
+                                                        citations.append(citation)
 
-                # Check for grounding metadata
-                if hasattr(candidate, 'grounding_metadata'):
-                    grounding = candidate.grounding_metadata
-
-                    # Extract grounding chunks/sources
-                    if hasattr(grounding, 'grounding_chunks'):
-                        for chunk in grounding.grounding_chunks:
-                            if hasattr(chunk, 'web'):
-                                web = chunk.web
-                                citation = {
-                                    "title": getattr(web, 'title', 'Source'),
-                                    "url": getattr(web, 'uri', ''),
-                                    "snippet": getattr(chunk, 'content', '')
-                                }
-                                citations.append(citation)
-
-                    # Extract web search queries
-                    if hasattr(grounding, 'web_search_queries'):
-                        for query in grounding.web_search_queries:
-                            # This is just the query, not a citation
-                            pass
-
-            # If no grounding metadata, try to extract URLs from response text
+            # Fallback: extract URLs from text if no grounding metadata
             if not citations:
                 citations = self._extract_urls_from_text(response.text)
 
         except Exception as e:
             print(f"Error extracting citations: {e}")
-            # Try fallback URL extraction
             citations = self._extract_urls_from_text(response.text)
 
         return citations
+    
+    def _format_response(self, text: str) -> str:
+        """
+        Format the response text to remove bullets, stars, and ensure proper sentence flow
+
+        Args:
+            text: Raw response text
+
+        Returns:
+            Formatted text
+        """
+        # Remove markdown formatting
+        text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)  # Remove bold
+        text = re.sub(r'\*(.+?)\*', r'\1', text)  # Remove italic
+        text = re.sub(r'^[\*\-\•]\s+', '', text, flags=re.MULTILINE)  # Remove bullet points
+        text = re.sub(r'^\d+\.\s+', '', text, flags=re.MULTILINE)  # Remove numbered lists
+        
+        # Clean up extra whitespace
+        text = re.sub(r'\n{3,}', '\n\n', text)  # Max 2 newlines
+        text = text.strip()
+        
+        return text
 
     def _extract_urls_from_text(self, text: str) -> List[Dict]:
         """
@@ -206,13 +258,16 @@ Be thorough and cite reliable sources."""
         Returns:
             Summary text
         """
-        if not self.model:
+        if not self.client:
             raise Exception("Gemini API not initialized. Please check GEMINI_API_KEY.")
 
         prompt = f"Summarize the following text in {max_words} words or less:\n\n{text}"
 
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
             return response.text
         except Exception as e:
             raise Exception(f"Error generating summary: {str(e)}")
